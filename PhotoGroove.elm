@@ -18,6 +18,11 @@ type alias Msg =
     , data : String
     }
 
+type ThumbnailSize
+    = Small
+    | Medium
+    | Large
+
 initialModel : Model
 initialModel = 
     {
@@ -39,10 +44,14 @@ urlPrefix =
 
 update : Msg -> Model -> Model
 update msg model =
-    if msg.operation == "SELECT_PHOTO" then
-        { model | selectedUrl = msg.data}
-    else
-        model
+    case msg.operation of
+        "SELECT_PHOTO" ->
+            { model | selectedUrl = msg.data}
+        "SURPRISE_ME" ->
+            { model | selectedUrl = "2.jpeg"}
+        _ ->
+            model
+
 viewThumbnail : String -> Photo -> Html Msg
 viewThumbnail selectedUrl thumbnail =
     img [ src (urlPrefix ++ thumbnail.url)

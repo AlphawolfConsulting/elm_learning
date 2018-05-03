@@ -8262,9 +8262,19 @@ var _elm_lang$html$Html_Events$Options = F2(
 
 var _user$project$PhotoGroove$update = F2(
 	function (msg, model) {
-		return _elm_lang$core$Native_Utils.eq(msg.operation, 'SELECT_PHOTO') ? _elm_lang$core$Native_Utils.update(
-			model,
-			{selectedUrl: msg.data}) : model;
+		var _p0 = msg.operation;
+		switch (_p0) {
+			case 'SELECT_PHOTO':
+				return _elm_lang$core$Native_Utils.update(
+					model,
+					{selectedUrl: msg.data});
+			case 'SURPRISE_ME':
+				return _elm_lang$core$Native_Utils.update(
+					model,
+					{selectedUrl: '2.jpeg'});
+			default:
+				return model;
+		}
 	});
 var _user$project$PhotoGroove$urlPrefix = 'http://elm-in-action.com/';
 var _user$project$PhotoGroove$viewThumbnail = F2(
