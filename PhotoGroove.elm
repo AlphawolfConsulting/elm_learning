@@ -9,6 +9,11 @@ import Random
 type alias Photo =
     { url : String }
 
+type ThumbnailSize
+    = Small
+    | Medium
+    | Large
+
 type alias Model = 
     {  photos : List Photo
     , selectedUrl : String
@@ -20,11 +25,6 @@ type Msg
     | SurpriseMe
     | SetSize ThumbnailSize
     | SeletectByIndex Int
-
-type ThumbnailSize
-    = Small
-    | Medium
-    | Large
 
 update : Msg -> Model -> ( Model, Cmd Msg)
 update msg model =
