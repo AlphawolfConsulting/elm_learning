@@ -16,7 +16,8 @@ type ThumbnailSize
 
 type alias Model = 
     {  photos : List Photo
-    , selectedUrl : String
+    , selectedUrl : Maybe String
+    , loadingError : Maybe String
     , chosenSize : ThumbnailSize
     }
 
@@ -30,7 +31,7 @@ update : Msg -> Model -> ( Model, Cmd Msg)
 update msg model =
     case msg of
         SelectedByUrl url ->
-            ({ model | selectedUrl = url },Cmd.none)
+            ({ model | selectedUrl = Just url },Cmd.none)
         SurpriseMe ->
             ( model, Random.generate SeletectByIndex randomPhotoPicker )
         SetSize size ->
@@ -41,12 +42,9 @@ update msg model =
 initialModel : Model
 initialModel = 
     {
-        photos = 
-        [ { url = "1.jpeg" }
-        , { url = "2.jpeg" }
-        , { url = "3.jpeg"}
-        ]
-        , selectedUrl = "1.jpeg"
+        photos = [ ]
+        , selectedUrl = Nothing
+        , loadingError = Nothing
         , chosenSize = Small
     }
 
@@ -58,13 +56,13 @@ urlPrefix : String
 urlPrefix = 
     "http://elm-in-action.com/"
 
-getPhotoUrl : Int -> String
+getPhotoUrl : Int -> Maybe String
 getPhotoUrl index =
     case Array.get index photoArray of
         Just photo ->
-            photo.url
+            Just photo.url
         Nothing ->
-            ""
+            Nothing
 
 sizeToString : ThumbnailSize -> String
 sizeToString size =
@@ -90,13 +88,21 @@ randomPhotoPicker : Random.Generator Int
 randomPhotoPicker =
     Random.int 0 ( Array.length photoArray - 1 )
 
-viewThumbnail : String -> Photo -> Html Msg
+viewThumbnail : Maybe String -> Photo -> Html Msg
 viewThumbnail selectedUrl thumbnail =
     img [ src (urlPrefix ++ thumbnail.url)
-            , classList [ ( "selected", selectedUrl == thumbnail.url ) ]
+            , classList [ ( "selected", selectedUrl == Just thumbnail.url ) ]
             , onClick ( SelectedByUrl thumbnail.url )
             ]
             []
+
+viewLarge : Maybe String -> Html Msg
+viewLarge maybeUrl =
+    case maybeUrl of
+        Nothing ->
+            text ""
+        Just url ->
+            img [ class "large", src (urlPrefix ++ "large/" ++ url) ] []
 
 viewSizeChooser : ThumbnailSize -> Html Msg
 viewSizeChooser size =
@@ -117,11 +123,7 @@ view model =
             [ viewSizeChooser Small, viewSizeChooser Medium, viewSizeChooser Large ]
         , div [ id "thumbnails", class (sizeToClass model.chosenSize) ] 
             (List.map ( viewThumbnail model.selectedUrl ) model.photos)
-        , img 
-            [ class "large" 
-            , src (urlPrefix ++ "large/" ++ model.selectedUrl)
-            ]
-            []
+        , viewLarge model.selectedUrl
         ]
 main : Program Never Model Msg
 main = 
