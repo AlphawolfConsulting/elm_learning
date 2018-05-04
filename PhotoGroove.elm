@@ -5,6 +5,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Array exposing (Array)
 import Random 
+import Http exposing (..)
 
 type alias Photo =
     { url : String }
@@ -26,6 +27,7 @@ type Msg
     | SurpriseMe
     | SetSize ThumbnailSize
     | SeletectByIndex Int
+    | LoadPhotos ( Result Http.Error String )
 
 update : Msg -> Model -> ( Model, Cmd Msg)
 update msg model =
@@ -33,12 +35,36 @@ update msg model =
         SelectedByUrl url ->
             ({ model | selectedUrl = Just url },Cmd.none)
         SurpriseMe ->
+            let
+                randomPhotoPicker = Random.int 0 ( List.length model.photos - 1 )
+            in
             ( model, Random.generate SeletectByIndex randomPhotoPicker )
         SetSize size ->
             ( { model | chosenSize = size}, Cmd.none)
         SeletectByIndex index ->
-            ( { model | selectedUrl = getPhotoUrl index }, Cmd.none )
-
+            let
+                newSelectedUrl : Maybe String
+                newSelectedUrl =
+                    model.photos
+                    |> Array.fromList
+                    |> Array.get index
+                    |> Maybe.map .url
+            in
+            ( { model | selectedUrl = newSelectedUrl }, Cmd.none )
+        LoadPhotos result ->
+            case result of
+                Ok responseStr ->
+                    let
+                        urls = 
+                            String.split "," responseStr
+                        
+                        photos = 
+                            List.map Photo urls
+                    in
+                        ( { model | photos = photos}, Cmd.none )
+                Err httpError ->
+                    ( model, Cmd.none)
+                
 initialModel : Model
 initialModel = 
     {
@@ -84,9 +110,11 @@ sizeToClass size =
         Large ->
             "large"
 
-randomPhotoPicker : Random.Generator Int
+
+
+{- randomPhotoPicker : Random.Generator Int
 randomPhotoPicker =
-    Random.int 0 ( Array.length photoArray - 1 )
+    Random.int 0 ( Array.length photoArray - 1 ) -}
 
 viewThumbnail : Maybe String -> Photo -> Html Msg
 viewThumbnail selectedUrl thumbnail =
