@@ -34,13 +34,16 @@ update msg model =
     case msg of
         SelectedByUrl url ->
             ({ model | selectedUrl = Just url },Cmd.none)
+
         SurpriseMe ->
             let
                 randomPhotoPicker = Random.int 0 ( List.length model.photos - 1 )
             in
-            ( model, Random.generate SeletectByIndex randomPhotoPicker )
+                ( model, Random.generate SeletectByIndex randomPhotoPicker )
+
         SetSize size ->
             ( { model | chosenSize = size}, Cmd.none)
+
         SeletectByIndex index ->
             let
                 newSelectedUrl : Maybe String
@@ -50,21 +53,26 @@ update msg model =
                     |> Array.get index
                     |> Maybe.map .url
             in
-            ( { model | selectedUrl = newSelectedUrl }, Cmd.none )
-        LoadPhotos result ->
-            case result of
-                Ok responseStr ->
-                    let
-                        urls = 
-                            String.split "," responseStr
-                        
-                        photos = 
-                            List.map Photo urls
-                    in
-                        ( { model | photos = photos}, Cmd.none )
-                Err httpError ->
-                    ( model, Cmd.none)
+                ( { model | selectedUrl = newSelectedUrl }, Cmd.none )
+
+        LoadPhotos (Ok responseStr) ->
+            let
+                urls = 
+                    String.split "," responseStr
                 
+                photos = 
+                    List.map Photo urls
+            in
+                ( { model | photos = photos}, Cmd.none )
+        LoadPhotos (Err _ ) ->
+            ( model, Cmd.none)
+
+initialCmd : Cmd Msg
+initialCmd =
+    "http://elm-in-action.com/photos/list"
+        |> Http.getString
+        |> Http.send LoadPhotos
+
 initialModel : Model
 initialModel = 
     {
@@ -156,7 +164,7 @@ view model =
 main : Program Never Model Msg
 main = 
     Html.program
-    {   init = ( initialModel, Cmd.none)
+    {   init = ( initialModel, initialCmd)
         , view = view
         , update = update
         , subscriptions = (\model -> Sub.none)
