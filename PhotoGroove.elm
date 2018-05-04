@@ -65,7 +65,7 @@ update msg model =
             in
                 ( { model | photos = photos, selectedUrl = List.head urls}, Cmd.none )
         LoadPhotos (Err _ ) ->
-            ( model, Cmd.none)
+            ( { model | loadingError = Just "We got an error loading images list. You might try turning your machine off and on?"}, Cmd.none)
 
 initialCmd : Cmd Msg
 initialCmd =
@@ -118,12 +118,6 @@ sizeToClass size =
         Large ->
             "large"
 
-
-
-{- randomPhotoPicker : Random.Generator Int
-randomPhotoPicker =
-    Random.int 0 ( Array.length photoArray - 1 ) -}
-
 viewThumbnail : Maybe String -> Photo -> Html Msg
 viewThumbnail selectedUrl thumbnail =
     img [ src (urlPrefix ++ thumbnail.url)
@@ -147,6 +141,17 @@ viewSizeChooser size =
         , text ( sizeToString size )
         ]
 
+viewHttpError: Model -> Html Msg
+viewHttpError model =
+    case model.loadingError of
+        Nothing ->
+            view model
+        Just errorMessage ->
+            div [ class "error-message"] 
+            [ h1 [] [ text "Photo Groove"]
+            , p [] [ text errorMessage ]
+            ]
+
 view : Model -> Html Msg
 view model = 
     div [ class "content" ]
@@ -165,7 +170,7 @@ main : Program Never Model Msg
 main = 
     Html.program
     {   init = ( initialModel, initialCmd)
-        , view = view
+        , view = viewHttpError
         , update = update
         , subscriptions = (\model -> Sub.none)
     }
