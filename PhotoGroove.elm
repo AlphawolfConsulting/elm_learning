@@ -6,8 +6,25 @@ import Array exposing (Array)
 import Random 
 import Http exposing (..)
 import Html.Attributes as Attr exposing ( id, class, classList, src, name, max, type_, title )
-import Json.Decode exposing (string, int, list, Decoder, at)
+import Json.Decode exposing (string, int, list, Decoder, at, Value)
 import Json.Decode.Pipeline exposing (decode, required, optional)
+
+type alias Model = 
+    {  photos : List Photo
+    , pastaStatus : String
+    , selectedUrl : Maybe String
+    , loadingError : Maybe String
+    , chosenSize : ThumbnailSize
+    , hue : Int
+    , ripple : Int
+    , noise : Int
+    }
+
+-- This is for sending messages to Pasta in the js env
+port setFilters : FilterOptions -> Cmd msg
+
+-- This is for reciecing messages from Pasta from js env
+port pastaStatusChanges : (String -> msg) -> Sub msg
 
 type alias Photo =
     { url : String
@@ -20,19 +37,6 @@ type ThumbnailSize
     | Medium
     | Large
 
-type alias Model = 
-    {  photos : List Photo
-    , status : String
-    , selectedUrl : Maybe String
-    , loadingError : Maybe String
-    , chosenSize : ThumbnailSize
-    , hue : Int
-    , ripple : Int
-    , noise : Int
-    }
-
-port setFilters : FilterOptions -> Cmd msg
-
 type alias FilterOptions =
     { url : String
     , filters : List { name : String, amount: Float}
@@ -41,11 +45,11 @@ type alias FilterOptions =
 type Msg 
     = SelectedByUrl String
     | SeletectByIndex Int
-    | SetStatus String
     | SetSize ThumbnailSize
     | SetHue Int
     | SetRipple Int
     | SetNoise Int
+    | SetPastaStatus String
     | SurpriseMe
     | LoadPhotos ( Result Http.Error (List Photo) )
 
@@ -66,17 +70,26 @@ update msg model =
             in
                 applyFilters { model | selectedUrl = newSelectedUrl }
 
-        SetStatus status ->
-            ( {model | status = status}, Cmd.none)
+        SetPastaStatus pastaStatus ->
+            ( {model | pastaStatus = pastaStatus}, Cmd.none)
+
+        SetSize size ->
+            ( { model | chosenSize = size}, Cmd.none)
+
+        SetHue hue ->
+            applyFilters { model | hue = hue }
+
+        SetRipple ripple ->
+            applyFilters { model | ripple = ripple }
+
+        SetNoise noise ->
+            applyFilters { model | noise = noise }
 
         SurpriseMe ->
             let
                 randomPhotoPicker = Random.int 0 ( List.length model.photos - 1 )
             in
                 ( model, Random.generate SeletectByIndex randomPhotoPicker )
-
-        SetSize size ->
-            ( { model | chosenSize = size}, Cmd.none)
 
         LoadPhotos (Ok photos) ->
             applyFilters 
@@ -88,14 +101,6 @@ update msg model =
         LoadPhotos (Err _ ) ->
             ( { model | loadingError = Just "We got an error loading images list. You might try turning your machine off and on?"}, Cmd.none)
 
-        SetHue hue ->
-            applyFilters { model | hue = hue }
-
-        SetRipple ripple ->
-            applyFilters { model | ripple = ripple }
-
-        SetNoise noise ->
-            applyFilters { model | noise = noise }
 
 applyFilters : Model -> ( Model , Cmd Msg )
 applyFilters model =
@@ -143,7 +148,7 @@ initialModel : Model
 initialModel = 
     {
         photos = [ ]
-        , status = ""
+        , pastaStatus = ""
         , selectedUrl = Nothing
         , loadingError = Nothing
         , chosenSize = Small
@@ -243,7 +248,7 @@ view model =
         , button 
             [ onClick SurpriseMe ]
             [ text "Surprise Me" ]
-        , div [ class "status" ] [ text model.status ]
+        , div [ class "status" ] [ text model.pastaStatus ]
         , div [ class "filters" ]
             [ viewPaperSlider "Hue" SetHue model.hue
             , viewPaperSlider "Ripple" SetRipple model.ripple
@@ -256,11 +261,18 @@ view model =
             (List.map ( viewThumbnail model.selectedUrl ) model.photos)
         , viewLarge model.selectedUrl
         ]
-main : Program Never Model Msg
+main : Program Float Model Msg
 main = 
-    Html.program
-    {   init = ( initialModel, initialCmd)
+    Html.programWithFlags
+    {   init = init
         , view = viewHttpError
         , update = update
-        , subscriptions = (\model -> Sub.none)
+        , subscriptions = \_ -> pastaStatusChanges SetPastaStatus
     }
+
+init : Float -> ( Model, Cmd Msg)
+init flags =
+    let
+        status = "Initializing Pasta ver: " ++ toString flags
+    in
+        ( {initialModel | pastaStatus = status}, initialCmd )
